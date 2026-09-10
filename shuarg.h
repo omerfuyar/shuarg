@@ -86,24 +86,58 @@ SHUC_ARGS_BOOLEAN_TYPE SHU_ArgsBoolean(const char *prefix);
 
 static struct
 {
-    int argc;
-    char **argv;
+    usz argCount;   // argc
+    char **argData; // got from argv, immutable
+    bool *argsUsed; // malloced with argCount
 } SHUARG = {0};
 
 #pragma endregion Internals
 
 void SHU_InitializeArgs(int argc, char **argv)
 {
-    SHUARG.argc = argc;
-    SHUARG.argv = argv;
+    SHUARG.argCount = (usz)argc;
+    SHUARG.argData = argv;
+    SHUARG.argsUsed = malloc(sizeof(bool) * SHUARG.argCount);
+    SHU_Assert(SHUARG.argsUsed, "Internal: Memory allocation failed for size '%zu'.", SHUARG.argCount);
+    memset(SHUARG.argsUsed, 0x00, SHUARG.argCount);
 }
 
 void SHU_TerminateArgs(void)
 {
+    for (usz i = 0; i < SHUARG.argCount; i++)
+    {
+        bool *currentArgIsUsed = SHUARG.argsUsed + i;
+        char *currentArgStr = SHUARG.argData + i;
+
+        if (*currentArgIsUsed)
+        {
+            SHU_LogWarning("Parameter %.*s is not recognized.", currentArgStr);
+        }
+    }
+
+    memset(SHUARG.argsUsed, 0x00, SHUARG.argCount);
+    free(SHUARG.argData);
 }
 
 SHUSliceView SHU_ArgsString(const char *prefix)
 {
+    for (usz i = 0; i < SHUARG.argCount; i++)
+    {
+        bool *currentArgIsUsed = SHUARG.argsUsed + i;
+        char *currentArgStr = SHUARG.argData + i;
+
+        if (*currentArgIsUsed)
+        {
+            continue;
+        }
+
+        if (strcmp(prefix, currentArgStr) == 0)
+        {
+            *currentArgIsUsed = true;
+            // parse
+            // return
+        }
+    }
 }
 
 SHUC_ARGS_INTEGER_TYPE SHU_ArgsInteger(const char *prefix)
